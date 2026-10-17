@@ -24,3 +24,7 @@ export function hold(jobId: string, taskId: string, amount: number) {
 export function release(jobId: string, paymentIntentId: string) {
   return stripe().paymentIntents.cancel(paymentIntentId, {}, { idempotencyKey: `${jobId}:cancel` });
 }
+
+export function capture(jobId: string, paymentIntentId: string) {
+  return stripe().paymentIntents.capture(paymentIntentId, {}, { idempotencyKey: `${jobId}:capture` });
+}

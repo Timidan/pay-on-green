@@ -1,12 +1,12 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, posix } from "node:path";
 import { CreateosSandboxClient, CreateosSandboxNotFoundError, type Sandbox } from "@nodeops-createos/sandbox";
 
 const rules = ["registry.npmjs.org:443"];
 const timeoutMs = 10_000;
 const idFile = join(process.cwd(), ".sandbox-id");
 
-export async function sharedSandbox(): Promise<{
+export async function sharedSandbox(signal?: AbortSignal): Promise<{
   sandbox: Sandbox;
   reused: boolean;
   ms: number;
@@ -26,23 +26,27 @@ export async function sharedSandbox(): Promise<{
   let sandbox: Sandbox | undefined;
   if (id) {
     try {
-      sandbox = await client.getSandbox(id, { timeoutMs });
+      sandbox = await client.getSandbox(id, { timeoutMs, signal });
     } catch (error) {
       if (!(error instanceof CreateosSandboxNotFoundError)) throw error;
     }
   }
   const reused = sandbox?.status === "running";
   if (!reused) {
+    if (sandbox) {
+      await sandbox.destroy({ timeoutMs, signal });
+      await sandbox.waitUntilDestroyed({ timeoutMs: 30_000, signal, request: { timeoutMs } });
+    }
     sandbox = await client.createSandbox(
       { shape: "s-1vcpu-1gb", rootfs: "devbox:1", egress: rules },
-      { timeoutMs: 30_000 },
+      { timeoutMs: 30_000, signal },
     );
     await writeFile(idFile, `${sandbox.id}\n`, { mode: 0o600 });
   }
   if (!sandbox) throw new Error("Sandbox unavailable");
-  let egress = (await sandbox.getEgress({ timeoutMs })).egress;
+  let egress = (await sandbox.getEgress({ timeoutMs, signal })).egress;
   if (egress.length !== 1 || egress[0] !== rules[0]) {
-    egress = (await sandbox.setEgress(rules, { timeoutMs })).egress;
+    egress = (await sandbox.setEgress(rules, { timeoutMs, signal })).egress;
   }
   if (egress.length !== 1 || egress[0] !== rules[0]) {
     throw new Error("Sandbox egress allowlist is unsafe");
@@ -50,21 +54,34 @@ export async function sharedSandbox(): Promise<{
   return { sandbox, reused, ms: Date.now() - started, egress };
 }
 
-export async function wipeWork(sandbox: Sandbox) {
+export async function wipeWork(sandbox: Sandbox, signal?: AbortSignal) {
   const result = await sandbox.runCommand(
     "sh",
     ["-c", "rm -rf /work && mkdir -p /work/src /work/test"],
-    { timeoutMs },
+    { timeoutMs, signal },
   );
   if (result.result.exit_code !== 0) throw new Error("Could not reset sandbox work directory");
 }
 
-export async function uploadFiles(sandbox: Sandbox, files: Record<string, string>) {
+export async function uploadFiles(sandbox: Sandbox, files: Record<string, string>, signal?: AbortSignal) {
   for (const [path, content] of Object.entries(files)) {
-    await sandbox.files.upload(`/work/${path}`, content, { timeoutMs });
+    const parent = posix.dirname(path);
+    if (parent !== ".") {
+      const created = await sandbox.runCommand("mkdir", ["-p", `/work/${parent}`], { timeoutMs, signal });
+      if (created.result.exit_code !== 0) throw new Error(`Could not create directory for ${path}`);
+    }
+    await sandbox.files.upload(`/work/${path}`, content, { timeoutMs, signal });
   }
 }
 
-export async function runTests(sandbox: Sandbox, testCmd: string) {
-  return sandbox.runCommand("sh", ["-c", `cd /work && ${testCmd}`], { timeoutMs: 30_000 });
+export async function restoreTests(sandbox: Sandbox, files: Record<string, string>, signal?: AbortSignal) {
+  const reset = await sandbox.runCommand(
+    "sh", ["-c", "rm -rf /work/test && mkdir -p /work/test"], { timeoutMs, signal },
+  );
+  if (reset.result.exit_code !== 0) throw new Error("Could not restore test directory");
+  await uploadFiles(sandbox, files, signal);
+}
+
+export async function runTests(sandbox: Sandbox, testCmd: string, signal?: AbortSignal) {
+  return sandbox.runCommand("sh", ["-c", `cd /work && ${testCmd}`], { timeoutMs: 30_000, signal });
 }
