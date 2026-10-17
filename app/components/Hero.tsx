@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
+import { Box, CircleCheck, Lock, Undo2 } from "lucide-react";
 import type { JobEvent } from "@/lib/contract";
 import { MOCK_TASKS, mockSteps } from "@/lib/mock";
 import { Receipt } from "./Receipt";
@@ -54,9 +56,19 @@ export function Hero() {
           </span>
           .
         </h1>
-        <p className="rise mt-7 max-w-[42ch] text-[clamp(1.0625rem,1.3vw,1.25rem)] leading-relaxed text-ink-2" style={rise(2)}>
-          Stripe holds $5. The agent fixes your failing test in a locked CreateOS sandbox. Green captures it. Red releases it.
-        </p>
+        <ul className="rise mt-7 flex flex-wrap gap-2" style={rise(2)} aria-label="How it pays">
+          {[
+            { icon: Lock, text: "$5 held" },
+            { icon: Box, text: "Fixed in a sandbox" },
+            { icon: CircleCheck, text: "Green = paid" },
+            { icon: Undo2, text: "Red = $0" },
+          ].map(({ icon: Icon, text }) => (
+            <li key={text} className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-3.5 py-2 text-sm font-medium text-ink-2">
+              <Icon aria-hidden size={16} strokeWidth={1.75} className="text-pass" />
+              {text}
+            </li>
+          ))}
+        </ul>
         <div className="rise mt-9" style={rise(3)}>
           <ShimmerButton
             shimmerColor="#22c55e"
@@ -66,6 +78,16 @@ export function Hero() {
           >
             Try a live fix
           </ShimmerButton>
+        </div>
+        <div className="rise mt-10 flex flex-wrap items-center gap-x-6 gap-y-3" style={rise(4)}>
+          <span className="font-mono text-[0.7rem] tracking-[0.14em] text-muted uppercase">Powered by</span>
+          <a href="https://docs.stripe.com/projects" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 opacity-80 transition-opacity hover:opacity-100" aria-label="Stripe Projects">
+            <Image src="/brand/stripe-mark.svg" alt="" width={22} height={22} unoptimized />
+            <span className="text-[1.05rem] font-semibold tracking-[-0.02em] text-[#635BFF]">Stripe</span>
+          </a>
+          <a href="https://createos.sh" target="_blank" rel="noreferrer" className="opacity-80 transition-opacity hover:opacity-100" aria-label="CreateOS">
+            <Image src="/brand/createos.svg" alt="" width={130} height={45} unoptimized className="-my-2" />
+          </a>
         </div>
       </div>
 

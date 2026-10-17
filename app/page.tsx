@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import { Hero } from "./components/Hero";
+import { HowItWorks } from "./components/HowItWorks";
+import { Reveal } from "./components/Reveal";
 import { Run } from "./components/Run";
 
 async function RunWithParams({ searchParams }: { searchParams: PageProps<"/">["searchParams"] }) {
@@ -11,12 +13,13 @@ export default function Home({ searchParams }: PageProps<"/">) {
   return (
     <main className="mx-auto w-full max-w-6xl overflow-x-clip px-4 pb-16 sm:px-6">
       <Hero />
+      <HowItWorks />
       <section id="run" className="scroll-mt-6 pt-14">
-        <p className="font-mono text-xs tracking-[0.14em] text-muted uppercase">Try it</p>
-        <h2 className="mt-2 text-[clamp(1.75rem,3vw,2.5rem)] leading-tight font-semibold tracking-[-0.03em]">Pick a failing test. Pay only for green.</h2>
-        <p className="mt-2 max-w-2xl text-pretty text-muted">
-          The $5 is a real Stripe hold in test mode. The fix runs in a CreateOS sandbox that can reach one host and nothing else.
-        </p>
+        <Reveal>
+          <p className="font-mono text-xs tracking-[0.14em] text-muted uppercase">Try it</p>
+          <h2 className="mt-2 text-[clamp(1.75rem,3vw,2.5rem)] leading-tight font-semibold tracking-[-0.03em]">Pick a failing test. Pay only for green.</h2>
+          <p className="mt-2 text-muted">Real Stripe hold, test mode. Real sandbox.</p>
+        </Reveal>
         <Suspense fallback={<div className="mt-10 h-96" />}>
           <RunWithParams searchParams={searchParams} />
         </Suspense>
