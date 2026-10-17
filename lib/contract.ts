@@ -10,6 +10,9 @@ export type Task = {
 
 export type JobEvent =
   | { t: "queued"; at: number; position: number }
+  | { t: "repo"; at: number; url: string; commit: string; testCmd: string; runner: "node" | "jest" | "vitest" | "npm" }
+  | { t: "setup"; at: number; step: "clone" | "install" | "lock"; ok: boolean; ms: number; detail?: string }
+  | { t: "patch"; at: number; diff: string; files: string[] }
   | { t: "hold"; at: number; paymentIntentId: string; amountCents: number; status: "requires_capture" }
   | { t: "sandbox"; at: number; sandboxId: string; image: string; reused: boolean; ms: number }
   | { t: "egress"; at: number; rules: string[] | null }
@@ -36,3 +39,5 @@ export type JobEvent =
 
 // `attempt: 0` is the red baseline run, before the agent writes anything.
 // `queued` is sent while the job waits for the shared sandbox; position 1 means next.
+// Repo jobs (POST {repoUrl, testPath?}) add `repo` and `setup` events before the red run,
+// and a final `patch` (the cumulative diff against the original commit) when captured.
