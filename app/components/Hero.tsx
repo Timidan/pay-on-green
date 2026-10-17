@@ -7,12 +7,13 @@ import { Receipt } from "./Receipt";
 import { ShimmerButton } from "./fx/ShimmerButton";
 
 // Loops two recorded runs, a capture then a release, on the hero receipt.
-function useReplay() {
+function useReplay(paused: boolean) {
   const [round, setRound] = useState(0);
   const [events, setEvents] = useState<JobEvent[]>([]);
   const script = round % 2 === 0 ? "fix" : "fail";
 
   useEffect(() => {
+    if (paused) return;
     const steps = mockSteps(script);
     const t0 = Date.now();
     const timers = steps.map(({ delay, ev }) =>
@@ -26,7 +27,7 @@ function useReplay() {
       }, last + 3800),
     );
     return () => timers.forEach(clearTimeout);
-  }, [script, round]);
+  }, [script, round, paused]);
 
   return { events, task: MOCK_TASKS[script === "fix" ? 0 : 2], running: !events.some((e) => e.t === "done") };
 }
@@ -34,7 +35,8 @@ function useReplay() {
 const rise = (i: number) => ({ "--i": i }) as React.CSSProperties;
 
 export function Hero() {
-  const replay = useReplay();
+  const [paused, setPaused] = useState(false);
+  const replay = useReplay(paused);
   return (
     <section className="grid min-h-[min(88dvh,52rem)] items-center gap-12 py-12 lg:grid-cols-[1.3fr_1fr] lg:gap-16">
       <div className="lg:self-center">
@@ -69,11 +71,18 @@ export function Hero() {
 
       <figure className="rise relative mx-auto min-h-[600px] w-full max-w-[380px] lg:translate-y-10 lg:rotate-[1.5deg]" style={rise(2)}>
         <div aria-hidden className="absolute -inset-6 -z-10 rounded-[28px] bg-[radial-gradient(closest-side,rgb(34_197_94/0.14),transparent)]" />
-        <div aria-hidden className="pointer-events-none">
+        <div aria-hidden inert className="pointer-events-none">
           <Receipt task={replay.task} events={replay.events} running={replay.running} />
         </div>
-        <figcaption className="mt-4 text-center font-mono text-[0.7rem] tracking-[0.08em] text-muted uppercase">
+        <figcaption className="mt-4 flex items-center justify-center gap-3 font-mono text-[0.7rem] tracking-[0.08em] text-muted uppercase">
           An example run, replayed
+          <button
+            type="button"
+            onClick={() => setPaused((p) => !p)}
+            className="rounded-full border border-line px-2.5 py-1 tracking-normal normal-case hover:border-input focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg"
+          >
+            {paused ? "Play" : "Pause"}
+          </button>
         </figcaption>
       </figure>
     </section>

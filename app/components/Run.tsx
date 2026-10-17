@@ -116,7 +116,7 @@ export function Run({ mock }: { mock?: string }) {
       if (ev.t === "done") es.close();
     };
     es.onerror = () => {
-      if (es.readyState === EventSource.CLOSED) setError("Lost the connection to the job.");
+      if (es.readyState === EventSource.CLOSED) setError("Lost the connection to the job. The hold still settles; refresh to run another fix.");
     };
     cleanup.current = () => es.close();
   }
@@ -124,12 +124,12 @@ export function Run({ mock }: { mock?: string }) {
   return (
     <>
       <section aria-label="Pick a failing test" className="mt-8">
-        <div role="radiogroup" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div role="group" aria-label="Failing test to fix" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[...tasks, REPO_TASK].map((t) => (
             <button
               key={t.id}
-              role="radio"
-              aria-checked={t.id === taskId}
+              type="button"
+              aria-pressed={t.id === taskId}
               disabled={running}
               onClick={() => setTaskId(t.id)}
               className={`rounded-xl border p-4 text-left transition-[border-color,box-shadow] duration-200 disabled:opacity-60 ${
@@ -138,7 +138,7 @@ export function Run({ mock }: { mock?: string }) {
             >
               <span className="flex items-center gap-2 font-medium">
                 {t.title}
-                {t.id === "repo" && <span className="rounded-full bg-pass-soft px-2 py-0.5 font-mono text-[10px] text-pass">YOURS</span>}
+                {t.id === "repo" && <span className="rounded-full bg-pass-soft px-2 py-0.5 font-mono text-[10px] text-pass uppercase">yours</span>}
               </span>
               <span className="mt-1 block text-sm text-muted">{t.blurb}</span>
             </button>
@@ -157,8 +157,15 @@ export function Run({ mock }: { mock?: string }) {
                 disabled={running}
                 onChange={(e) => setRepoUrl(e.target.value)}
                 placeholder="https://github.com/owner/repo"
-                className={`h-11 rounded-lg border bg-bg px-3 font-mono text-[13px] outline-none focus:border-fg ${repoOk ? "border-input" : "border-fail"}`}
+                aria-invalid={!repoOk}
+                aria-describedby={repoOk ? undefined : "repo-url-error"}
+                className={`h-11 rounded-lg border bg-bg px-3 font-mono text-base outline-offset-2 focus-visible:outline-2 focus-visible:outline-fg sm:text-[13px] ${repoOk ? "border-input" : "border-fail"}`}
               />
+              {!repoOk && (
+                <span id="repo-url-error" className="text-xs text-fail">
+                  Use a public GitHub link like https://github.com/owner/repo
+                </span>
+              )}
             </label>
             <label className="grid gap-1.5 text-sm">
               <span className="text-muted">Test file (optional)</span>
@@ -168,7 +175,7 @@ export function Run({ mock }: { mock?: string }) {
                 spellCheck={false}
                 onChange={(e) => setTestPath(e.target.value)}
                 placeholder="test/money.test.js"
-                className="h-11 rounded-lg border border-input bg-bg px-3 font-mono text-[13px] outline-none focus:border-fg"
+                className="h-11 rounded-lg border border-input bg-bg px-3 font-mono text-base outline-offset-2 focus-visible:outline-2 focus-visible:outline-fg sm:text-[13px]"
               />
             </label>
             <p className="text-xs text-muted sm:col-span-2">
@@ -187,7 +194,7 @@ export function Run({ mock }: { mock?: string }) {
           <button
             onClick={start}
             disabled={running || !task || (isRepo && !repoOk)}
-            className="h-12 rounded-full bg-fg px-6 font-medium text-white transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgb(34_197_94/0.25)] active:translate-y-0 active:scale-[0.98] disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
+            className="h-12 rounded-full bg-fg px-6 font-medium text-white transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgb(34_197_94/0.25)] active:translate-y-0 active:scale-[0.96] disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
           >
             {queued ? "Waiting in line…" : running ? "Fixing…" : done ? "Run again" : isRepo ? "Fix my repo for $5" : `Fix it for $${((task?.priceCents ?? 500) / 100).toFixed(0)}`}
           </button>
