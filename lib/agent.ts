@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, posix } from "node:path";
+import { protectedPath } from "./repo";
 
 type Patch = { files: { path: string; content: string }[]; note: string };
 export type Completion = Patch & { model: string; tokens?: number };
@@ -35,11 +36,12 @@ function parsePatch(value: unknown): Patch {
   return value as Patch;
 }
 
-export function patchPath(raw: string) {
+export function patchPath(raw: string, repo = false) {
   const path = posix.normalize(raw.replaceAll("\\", "/"));
-  const relative = posix.relative("/work", posix.resolve("/work", path));
-  if (relative.toLowerCase() === "test" || relative.toLowerCase().startsWith("test/")) {
-    return { rejected: "touched a test file", path: relative };
+  const root = repo ? "/work/repo" : "/work";
+  const relative = posix.relative(root, posix.resolve(root, path));
+  if (repo ? protectedPath(relative) : relative.toLowerCase() === "test" || relative.toLowerCase().startsWith("test/")) {
+    return { rejected: repo ? "touched a protected file" : "touched a test file", path: relative };
   }
   if (posix.isAbsolute(path) || relative === ".." || relative.startsWith("../") ||
       !relative || path.includes("\0")) {
