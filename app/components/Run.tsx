@@ -128,7 +128,7 @@ export function Run({ mock }: { mock?: string }) {
           </button>
           {mock ? (
             <span className="rounded-full border border-warn/40 bg-warn-soft px-3 py-1 font-mono text-xs text-warn">
-              Replay: a recorded run, not live
+              Replay: an example run, not live
             </span>
           ) : (
             <span className="text-sm text-muted">Stripe test mode. Use it freely; no real money moves.</span>
