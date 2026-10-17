@@ -30,6 +30,7 @@ Coding agents are paid whether or not their code works. Pay-on-Green flips that.
 - **Paid on proof, not on effort.** A `PaymentIntent` with `capture_method: "manual"` is authorized up front and settled exactly once: captured after a passing run, cancelled on every other exit, including errors and timeouts.
 - **The agent can't edit its way to green.** Patches that touch `test/` are rejected. Before every run the server deletes `test/` and rewrites it from its own copy, then runs the test command itself.
 - **Green is checked, not assumed.** A pass needs exit code 0 *and* node's own summary showing every expected test passed with none failing, so a patch can't fake success by exiting early.
+- **Built to demo live.** Each model call is capped at 25 s and falls back through four free models; a lost sandbox is recreated once; every job finishes within four minutes, settled.
 - **Untrusted code stays boxed.** The sandbox's egress allowlist holds a single host. Stripe, CreateOS and model keys never enter it; only source files do.
 - **Everything on one receipt.** The page prints each step as it happens (the hold, the sandbox, the red baseline, each patch, each run) and stamps the result: **CAPTURED** or **RELEASED, you paid $0**.
 
@@ -100,7 +101,7 @@ flowchart LR
     Jobs --> Sandbox["lib/sandbox.ts<br/>one shared CreateOS sandbox"]
 ```
 
-- **One Next.js process.** Jobs live in memory and stream to the page as Server-Sent Events. One job runs at a time; a second request gets `409`.
+- **One Next.js process.** Jobs live in memory and stream to the page as Server-Sent Events. One job runs at a time; the next ones wait in a queue (up to five) and see their place in line.
 - **One sandbox for the whole demo.** The CreateOS free plan allows one sandbox and ten creations a day, so the server creates it once, saves its id, and wipes `/work` between jobs.
 - **A frozen contract.** [`lib/contract.ts`](lib/contract.ts) defines every event the UI renders. `?mock=fix` and `?mock=fail` replay recorded runs without any keys.
 
@@ -135,7 +136,7 @@ Open http://localhost:3000. To see the UI without keys: http://localhost:3000/?m
 | Method | Path | Returns |
 |---|---|---|
 | `GET` | `/api/tasks` | The seeded tasks |
-| `POST` | `/api/jobs` | `{ jobId }`, or `409` while a job runs |
+| `POST` | `/api/jobs` | `202 { jobId }`; the job queues if another is running; `429` when five are already waiting |
 | `GET` | `/api/jobs/:id/events` | `text/event-stream` of `JobEvent`s, replayed from the start on connect |
 
 ## Project structure
