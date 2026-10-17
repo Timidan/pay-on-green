@@ -1,0 +1,71 @@
+{
+  "version": 4,
+  "project": {
+    "catalog": "prod",
+    "initializedAt": "2026-10-17T19:44:30.043Z",
+    "merchantDisplayName": null,
+    "merchantId": "acct_1URJsuDIML7PcSls",
+    "projectId": "project_61VaiO8jnkrLAzlnO16VahqGSHSQD2C0o31qWD4cyFCi",
+    "projectName": "stripe-probe"
+  },
+  "providers": {
+    "createos": {
+      "accountRequestId": "fprvcnn_61VaiQrvtvIGgOfc316VahqGSHSQD2C0o31qWD4cy3qa",
+      "configuration": {},
+      "linkedAt": "2026-10-16T23:23:45.737Z",
+      "providerId": "prvdr_61V0eGC6sUPXoATb051se",
+      "providerName": "createos",
+      "redirectUrl": null,
+      "requestedAt": "2026-10-16T23:23:45.737Z",
+      "status": "complete"
+    },
+    "openrouter": {
+      "accountRequestId": "fprvcnn_61VatL1Mq5vlMwnYW16VahqGSHSQD2C0o31qWD4cyJii",
+      "configuration": {},
+      "linkedAt": "2026-10-17T11:02:27.730Z",
+      "providerId": "prvdr_61URImmFACEuDHEx651IO",
+      "providerName": "OpenRouter",
+      "redirectUrl": null,
+      "requestedAt": "2026-10-17T11:02:27.730Z",
+      "status": "complete"
+    }
+  },
+  "resources": {
+    "createos-plan": {
+      "configuration": {},
+      "createdAt": "2026-10-16T23:23:47.104Z",
+      "lastRevealedAt": null,
+      "lastStatus": "complete",
+      "livemode": true,
+      "name": "createos-plan",
+      "providerId": "prvdr_61V0eGC6sUPXoATb051se",
+      "providerName": "createos",
+      "resourceId": "fres_61VaiQsMMA96v6kRi16VahqGSHSQD2C0o31qWD4cyUng",
+      "serviceId": "free"
+    },
+    "createos-project": {
+      "configuration": {},
+      "createdAt": "2026-10-16T23:23:51.151Z",
+      "lastRevealedAt": null,
+      "lastStatus": "complete",
+      "livemode": true,
+      "name": "createos-project",
+      "providerId": "prvdr_61V0eGC6sUPXoATb051se",
+      "providerName": "createos",
+      "resourceId": "fres_61VaiQveiCn3MvB0K16VahqGSHSQD2C0o31qWD4cyBGS",
+      "serviceId": "project"
+    },
+    "openrouter-plan": {
+      "configuration": {},
+      "createdAt": "2026-10-17T11:02:30.911Z",
+      "lastRevealedAt": null,
+      "lastStatus": "complete",
+      "livemode": true,
+      "name": "openrouter-plan",
+      "providerId": "prvdr_61URImmFACEuDHEx651IO",
+      "providerName": "OpenRouter",
+      "resourceId": "fres_61VatL42QPjgYKu7C16VahqGSHSQD2C0o31qWD4cyJ8y",
+      "serviceId": "free"
+    }
+  }
+}
