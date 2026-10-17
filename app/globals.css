@@ -120,7 +120,8 @@ body::after {
   mix-blend-mode: multiply;
   animation: stamp-in 420ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
 }
-.stamp small { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; }
+.stamp { text-transform: uppercase; }
+.stamp small { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: none; }
 .stamp-pass { color: #0a7a4f; }
 .stamp-neutral { color: #3d5a80; }
 @keyframes stamp-in {
@@ -155,6 +156,6 @@ body::after {
 .pill-fail { background: var(--fail-soft); color: var(--fail); }
 
 @media (prefers-reduced-motion: reduce) {
-  .print-in, .stamp, .blink, .rise { animation: none; }
+  .print-in, .stamp, .blink, .rise, .animate-shimmer-slide, .animate-spin-around { animation: none; }
   .stamp { opacity: 0.92; }
 }

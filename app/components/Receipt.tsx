@@ -9,7 +9,7 @@ function Line({ label, children, tone }: { label: string; children: React.ReactN
   const color = tone === "pass" ? "text-pass" : tone === "fail" ? "text-fail" : tone === "warn" ? "text-warn" : "";
   return (
     <li className="print-in grid grid-cols-[6.5rem_1fr] gap-2 py-1">
-      <span className="text-ink-muted">{label}</span>
+      <span className="text-ink-muted uppercase">{label}</span>
       <span className={color}>{children}</span>
     </li>
   );
@@ -19,7 +19,7 @@ function row(ev: JobEvent, i: number) {
   switch (ev.t) {
     case "hold":
       return (
-        <Line key={i} label="HOLD">
+        <Line key={i} label="hold">
           {usd(ev.amountCents)} on card ·{" "}
           <a className="underline decoration-dotted underline-offset-2" href={stripeUrl(ev.paymentIntentId)} target="_blank" rel="noreferrer">
             {shortId(ev.paymentIntentId)}
@@ -28,42 +28,42 @@ function row(ev: JobEvent, i: number) {
       );
     case "sandbox":
       return (
-        <Line key={i} label="SANDBOX">
+        <Line key={i} label="sandbox">
           CreateOS {ev.image} · {ev.reused ? "reused" : "new"} · {ev.ms} ms
         </Line>
       );
     case "egress":
       return (
-        <Line key={i} label="NETWORK">
+        <Line key={i} label="network">
           {ev.rules?.length ? `only ${ev.rules.join(", ")}` : "open"}
         </Line>
       );
     case "tests":
       return (
-        <Line key={i} label={`TESTS #${ev.attempt}`} tone={ev.pass ? "pass" : "fail"}>
+        <Line key={i} label={`tests #${ev.attempt}`} tone={ev.pass ? "pass" : "fail"}>
           {ev.pass ? "✓" : "✗"} {ev.summary}
           {ev.attempt === 0 && " (before the agent)"}
         </Line>
       );
     case "attempt":
       return ev.rejected ? (
-        <Line key={i} label={`PATCH #${ev.attempt}`} tone="warn">
+        <Line key={i} label={`patch #${ev.attempt}`} tone="warn">
           rejected: {ev.rejected}
         </Line>
       ) : (
-        <Line key={i} label={`PATCH #${ev.attempt}`}>
+        <Line key={i} label={`patch #${ev.attempt}`}>
           {shortModel(ev.model)}
         </Line>
       );
     case "repo":
       return (
-        <Line key={i} label="REPO">
+        <Line key={i} label="repo">
           {ev.url.replace("https://github.com/", "")} @ {ev.commit.slice(0, 7)} · {ev.runner}
         </Line>
       );
     case "setup":
       return (
-        <Line key={i} label={ev.step.toUpperCase()} tone={ev.ok ? undefined : "fail"}>
+        <Line key={i} label={ev.step} tone={ev.ok ? undefined : "fail"}>
           {ev.ok ? "✓" : "✗"}{" "}
           {ev.step === "clone" ? "cloned" : ev.step === "install" ? "dependencies installed" : "network locked to npm only"}
           {ev.ms ? ` · ${(ev.ms / 1000).toFixed(1)} s` : ""}
@@ -72,19 +72,19 @@ function row(ev: JobEvent, i: number) {
       );
     case "patch":
       return (
-        <Line key={i} label="PATCH" tone="pass">
+        <Line key={i} label="patch" tone="pass">
           ready · {ev.files.length} file{ev.files.length === 1 ? "" : "s"}
         </Line>
       );
     case "queued":
       return (
-        <Line key={i} label="IN LINE" tone="warn">
+        <Line key={i} label="in line" tone="warn">
           {ev.position === 1 ? "next up" : `#${ev.position}`} · waiting for the sandbox
         </Line>
       );
     case "error":
       return (
-        <Line key={i} label="ERROR" tone="fail">
+        <Line key={i} label="error" tone="fail">
           {ev.message}
         </Line>
       );
@@ -105,7 +105,7 @@ export function Receipt({ task, events, running }: { task?: Task; events: JobEve
   return (
     <section aria-label="Receipt" className="receipt relative self-start px-6 pt-6 pb-10 font-mono text-[13px] leading-snug">
       <header className="flex items-baseline justify-between border-b border-dashed border-ink/30 pb-3">
-        <span className="font-semibold tracking-[0.2em]">PAY-ON-GREEN</span>
+        <span className="font-semibold tracking-[0.2em] uppercase">Pay-on-Green</span>
         <span className="text-ink-muted">{usd(amount)} if green</span>
       </header>
       <p className="mt-3 text-ink-muted">Fix: {task?.title ?? "—"}</p>
@@ -121,7 +121,7 @@ export function Receipt({ task, events, running }: { task?: Task; events: JobEve
       </ol>
 
       <footer className="mt-3 flex items-baseline justify-between border-t border-dashed border-ink/30 pt-3 text-[15px] font-semibold">
-        <span>TOTAL</span>
+        <span className="uppercase">Total</span>
         <span>{settled?.t === "settled" ? (settled.outcome === "captured" ? usd(amount) : "$0.00") : "pending"}</span>
       </footer>
 
@@ -136,12 +136,12 @@ export function Receipt({ task, events, running }: { task?: Task; events: JobEve
         >
           {settled.outcome === "captured" ? (
             <>
-              CAPTURED
+              Captured
               <small>{usd(amount)} · tests green</small>
             </>
           ) : (
             <>
-              RELEASED
+              Released
               <small>you paid $0</small>
             </>
           )}
