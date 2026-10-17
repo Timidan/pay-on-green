@@ -55,6 +55,12 @@ function row(ev: JobEvent, i: number) {
           {shortModel(ev.model)}
         </Line>
       );
+    case "queued":
+      return (
+        <Line key={i} label="IN LINE" tone="warn">
+          {ev.position === 1 ? "next up" : `#${ev.position}`} · waiting for the sandbox
+        </Line>
+      );
     case "error":
       return (
         <Line key={i} label="ERROR" tone="fail">
@@ -67,6 +73,10 @@ function row(ev: JobEvent, i: number) {
 }
 
 export function Receipt({ task, events, running }: { task?: Task; events: JobEvent[]; running: boolean }) {
+  // Show only the latest queue position, and drop it once the job starts.
+  const started = events.some((e) => e.t === "hold");
+  const lastQueued = events.findLast((e) => e.t === "queued");
+  const shown = events.filter((e) => e.t !== "queued" || (!started && e === lastQueued));
   const settled = events.find((e) => e.t === "settled");
   const hold = events.find((e) => e.t === "hold");
   const amount = hold?.t === "hold" ? hold.amountCents : (task?.priceCents ?? 500);
@@ -80,8 +90,8 @@ export function Receipt({ task, events, running }: { task?: Task; events: JobEve
       <p className="mt-3 text-ink-muted">Fix: {task?.title ?? "—"}</p>
 
       <ol aria-live="polite" className="mt-2 min-h-40">
-        {events.length === 0 && <li className="py-1 text-ink-muted">Your receipt prints here.</li>}
-        {events.map(row)}
+        {shown.length === 0 && <li className="py-1 text-ink-muted">Your receipt prints here.</li>}
+        {shown.map(row)}
         {running && !settled && (
           <li className="py-1 text-ink-muted">
             <span className="blink">▍</span>

@@ -49,6 +49,7 @@ export function Run({ mock }: { mock?: string }) {
 
   const done = events.some((e) => e.t === "done");
   const running = busy && !done;
+  const queued = running && !events.some((e) => e.t === "hold") && events.some((e) => e.t === "queued");
   const task = tasks.find((t) => t.id === taskId);
   const tests = events.filter((e): e is Extract<JobEvent, { t: "tests" }> => e.t === "tests");
   const attempts = events.filter((e): e is Extract<JobEvent, { t: "attempt" }> => e.t === "attempt");
@@ -77,7 +78,8 @@ export function Run({ mock }: { mock?: string }) {
     });
     if (!r.ok) {
       setBusy(false);
-      setError(r.status === 409 ? "Another fix is running right now. Try again in a minute." : `Couldn't start the job (${r.status}).`);
+      const body = (await r.json().catch(() => ({}))) as { error?: string };
+      setError(body.error ?? `Couldn't start the job (${r.status}). Try again in a moment.`);
       return;
     }
     const { jobId } = (await r.json()) as { jobId: string };
@@ -122,9 +124,15 @@ export function Run({ mock }: { mock?: string }) {
             disabled={running || !task}
             className="h-12 rounded-full bg-fg px-6 font-medium text-white transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgb(34_197_94/0.25)] active:translate-y-0 active:scale-[0.98] disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
           >
-            {running ? "Fixing…" : done ? "Run again" : `Fix it for $${((task?.priceCents ?? 500) / 100).toFixed(0)}`}
+            {queued ? "Waiting in line…" : running ? "Fixing…" : done ? "Run again" : `Fix it for $${((task?.priceCents ?? 500) / 100).toFixed(0)}`}
           </button>
-          <span className="text-sm text-muted">Stripe test mode. Use it freely; no real money moves.</span>
+          {mock ? (
+            <span className="rounded-full border border-warn/40 bg-warn-soft px-3 py-1 font-mono text-xs text-warn">
+              Replay: an example run, not live
+            </span>
+          ) : (
+            <span className="text-sm text-muted">Stripe test mode. Use it freely; no real money moves.</span>
+          )}
         </div>
         {error && (
           <p role="alert" className="mt-3 text-sm text-fail">
