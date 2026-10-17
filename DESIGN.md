@@ -26,6 +26,6 @@ Geist for the interface and headings (600, negative tracking at display sizes). 
 ## Motion
 
 - The hero rises and de-blurs in under 800 ms, staggered by 120 ms.
-- The pixel-field "$5" drifts behind the headline and reacts to the pointer.
+- The hero receipt replays a recorded capture, then a recorded release, on a loop. It is captioned as an example.
 - Receipt lines print in over 260 ms; the stamp lands with a short overshoot.
 - `prefers-reduced-motion` turns all of it off and shows still text.

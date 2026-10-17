@@ -8,7 +8,6 @@ These components were copied into the repository and adapted. Each one is MIT-li
 
 | Component | Path | Upstream | License |
 |---|---|---|---|
-| SmoothUI Pixel Flow Field | `app/components/fx/PixelFlowField.tsx` | [educlopez/smoothui](https://github.com/educlopez/smoothui) | MIT |
 | Magic UI Shimmer Button | `app/components/fx/ShimmerButton.tsx` | [magicuidesign/magicui](https://github.com/magicuidesign/magicui) | MIT |
 
 ## Fonts
