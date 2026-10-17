@@ -219,7 +219,7 @@ export function Run({ mock }: { mock?: string }) {
         <div className="flex min-w-0 flex-col gap-6">
           <article className={`panel ${lastTests ? (lastTests.pass ? "panel-pass" : "panel-fail") : ""}`}>
             <header className="panel-head">
-              <span>Tests{lastTests ? ` · ${lastTests.attempt === 0 ? "before the agent" : `after patch #${lastTests.attempt}`}` : ""}</span>
+              <span>Running in the CreateOS sandbox{lastTests ? ` · ${lastTests.attempt === 0 ? "before the agent" : `after try #${lastTests.attempt}`}` : ""}</span>
               {lastTests && (
                 <span className={`pill ${lastTests.pass ? "pill-pass" : "pill-fail"}`}>{lastTests.pass ? "GREEN" : "RED"}</span>
               )}
@@ -235,7 +235,7 @@ export function Run({ mock }: { mock?: string }) {
 
           <article className={`panel ${lastAttempt?.rejected ? "panel-warn" : ""}`}>
             <header className="panel-head">
-              <span>{lastAttempt ? `Agent's patch #${lastAttempt.attempt}` : "Agent's patch"}</span>
+              <span>{lastAttempt ? `Code the agent wrote · try #${lastAttempt.attempt}` : "Code the agent wrote"}</span>
               {lastAttempt && <span className="font-mono text-xs text-muted">{lastAttempt.model}</span>}
             </header>
             {lastAttempt ? (
