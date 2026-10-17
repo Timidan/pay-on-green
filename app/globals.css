@@ -1,26 +1,160 @@
 @import "tailwindcss";
 
+/* "Analyst's desk" tokens, after Tern. One accent: green, which here means "paid". */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --bg: #f3f5f6;
+  --card: #ffffff;
+  --sunken: #edf0f2;
+  --fg: #0f1214;
+  --ink-2: #2a3035;
+  --muted: #556068;
+  --line: #e0e4e7;
+  --input: #c9d0d5;
+  --accent: #22c55e;
+  --pass: #08704f;
+  --pass-soft: #e0f2ea;
+  --fail: #af3526;
+  --fail-soft: #fbe7e3;
+  --warn: #6a5200;
+  --warn-soft: #fbf1d2;
+  --paper: #fbf8f1;
+  --ink: #1b1a17;
+  --ink-muted: #77705f;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-sunken: var(--sunken);
+  --color-fg: var(--fg);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-input: var(--input);
+  --color-accent: var(--accent);
+  --color-pass: var(--pass);
+  --color-pass-soft: var(--pass-soft);
+  --color-fail: var(--fail);
+  --color-fail-soft: var(--fail-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite alternate;
+  --animate-spin-around: spin-around calc(var(--speed) * 2) infinite linear;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@keyframes shimmer-slide { to { transform: translate(calc(100cqw - 100%), 0); } }
+@keyframes spin-around {
+  0% { transform: translateZ(0) rotate(0); }
+  15%, 35% { transform: translateZ(0) rotate(90deg); }
+  65%, 85% { transform: translateZ(0) rotate(270deg); }
+  100% { transform: translateZ(0) rotate(360deg); }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(ellipse 70% 45% at 50% -5%, rgb(34 197 94 / 0.07), transparent 70%),
+    var(--bg);
+  color: var(--fg);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-feature-settings: "ss01";
+}
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* Hero entry: fade up and de-blur, staggered */
+.rise { animation: rise 760ms cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: calc(var(--i, 0) * 120ms + 80ms); }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(24px); filter: blur(8px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+
+/* The cycling line under the headline */
+.cycle { display: inline-grid; }
+.cycle > span { grid-area: 1 / 1; opacity: 0; animation: cycle 9s infinite; }
+.cycle > span:nth-child(2) { animation-delay: 3s; }
+.cycle > span:nth-child(3) { animation-delay: 6s; }
+@keyframes cycle {
+  0% { opacity: 0; transform: translateY(0.4em); filter: blur(4px); }
+  5%, 28% { opacity: 1; transform: none; filter: blur(0); }
+  33%, 100% { opacity: 0; transform: translateY(-0.4em); filter: blur(4px); }
+}
+
+/* Receipt: warm paper on the cool desk */
+.receipt {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid #ebe4d4;
+  border-radius: 6px;
+  box-shadow: 0 1px 0 #fff inset, 0 20px 40px -28px rgb(15 18 20 / 0.35);
+}
+
+.print-in { animation: print-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes print-in {
+  from { opacity: 0; transform: translateY(-4px); clip-path: inset(0 0 100% 0); }
+  to { opacity: 1; transform: none; clip-path: inset(0); }
+}
+
+.blink { animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+.stamp {
+  position: absolute;
+  right: 22px;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 14px;
+  border: 3px solid currentColor;
+  border-radius: 6px;
+  font-family: var(--font-geist-mono);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  transform: rotate(-9deg);
+  mix-blend-mode: multiply;
+  animation: stamp-in 420ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+.stamp small { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; }
+.stamp-pass { color: #0a7a4f; }
+.stamp-neutral { color: #3d5a80; }
+@keyframes stamp-in {
+  from { opacity: 0; transform: rotate(-9deg) scale(1.8); }
+  to { opacity: 0.92; transform: rotate(-9deg) scale(1); }
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  overflow: hidden;
+  transition: border-color 300ms ease, box-shadow 300ms ease;
+}
+.panel-pass { border-color: color-mix(in oklab, var(--pass) 45%, var(--line)); box-shadow: 0 0 0 3px var(--pass-soft); }
+.panel-fail { border-color: color-mix(in oklab, var(--fail) 40%, var(--line)); box-shadow: 0 0 0 3px var(--fail-soft); }
+.panel-warn { border-color: color-mix(in oklab, var(--warn) 40%, var(--line)); box-shadow: 0 0 0 3px var(--warn-soft); }
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+  background: color-mix(in oklab, var(--sunken) 45%, var(--card));
+}
+.pill { font-family: var(--font-geist-mono); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.pill-pass { background: var(--pass-soft); color: var(--pass); }
+.pill-fail { background: var(--fail-soft); color: var(--fail); }
+
+@media (prefers-reduced-motion: reduce) {
+  .print-in, .stamp, .blink, .rise { animation: none; }
+  .stamp { opacity: 0.92; }
+  .cycle > span { animation: none; }
+  .cycle > span:first-child { opacity: 1; }
 }

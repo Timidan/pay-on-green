@@ -51,3 +51,4 @@ next-env.d.ts
 # pay-on-green
 .sandbox-id
 docs/
+.claude/launch.json

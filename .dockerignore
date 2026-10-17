@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.env
+.env.*
+.sandbox-id
+docs
+.projects/vault
+.projects/cache
