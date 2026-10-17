@@ -3,7 +3,7 @@ import Stripe from "stripe";
 function stripe() {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key?.startsWith("sk_test_")) throw new Error("Stripe test key is missing");
-  return new Stripe(key);
+  return new Stripe(key, { timeout: 10_000, maxNetworkRetries: 0 });
 }
 
 export function hold(jobId: string, taskId: string, amount: number) {

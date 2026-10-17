@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     ? body.taskId : undefined;
   if (typeof taskId !== "string") return Response.json({ error: "Invalid taskId" }, { status: 400 });
   const result = startJob(taskId);
-  if (result === "busy") return Response.json({ error: "A job is running" }, { status: 409 });
+  if (result === "full") return Response.json({ error: "The queue is full. Try again in a minute." }, { status: 429 });
   if (result === "unknown") return Response.json({ error: "Unknown task" }, { status: 404 });
   return Response.json({ jobId: result }, { status: 202 });
 }

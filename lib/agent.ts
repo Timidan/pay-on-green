@@ -63,7 +63,7 @@ async function codex(prompt: string, signal?: AbortSignal): Promise<Completion> 
           "--skip-git-repo-check", "--output-schema", "schema.json", "-o", "out.json", "-"],
         {
           cwd: dir,
-          timeout: 60_000,
+          timeout: 25_000,
           signal,
           maxBuffer: 1_000_000,
           env: {
@@ -92,13 +92,11 @@ async function codex(prompt: string, signal?: AbortSignal): Promise<Completion> 
 async function openrouter(prompt: string, signal?: AbortSignal): Promise<Completion> {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new Error("OpenRouter key is missing");
-  const deadline = Date.now() + 60_000;
   let lastError = "OpenRouter models were unavailable";
-  for (const model of ["nvidia/nemotron-3-super-120b-a12b:free", "cohere/north-mini-code:free", "openrouter/free"]) {
+  for (const model of ["nvidia/nemotron-3-super-120b-a12b:free", "cohere/north-mini-code:free",
+    "xingchen-agi/xing4.0-29b-a4b:free", "openrouter/free"]) {
     if (signal?.aborted) throw new Error("Job timed out");
-    const remaining = deadline - Date.now();
-    if (remaining <= 0) break;
-    const timeout = AbortSignal.timeout(Math.min(20_000, remaining));
+    const timeout = AbortSignal.timeout(25_000);
     try {
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",

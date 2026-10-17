@@ -6,7 +6,7 @@ const rules = ["registry.npmjs.org:443"];
 const timeoutMs = 10_000;
 const idFile = process.env.SANDBOX_ID_FILE || join(process.cwd(), ".sandbox-id");
 
-export async function sharedSandbox(signal?: AbortSignal): Promise<{
+export async function sharedSandbox(signal?: AbortSignal, replace?: Sandbox): Promise<{
   sandbox: Sandbox;
   reused: boolean;
   ms: number;
@@ -23,19 +23,25 @@ export async function sharedSandbox(signal?: AbortSignal): Promise<{
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
 
-  let sandbox: Sandbox | undefined;
-  if (id) {
+  let sandbox: Sandbox | undefined = replace;
+  if (id && !replace) {
     try {
       sandbox = await client.getSandbox(id, { timeoutMs, signal });
     } catch (error) {
       if (!(error instanceof CreateosSandboxNotFoundError)) throw error;
     }
   }
-  const reused = sandbox?.status === "running";
+  const reused = !replace && sandbox?.status === "running";
   if (!reused) {
     if (sandbox) {
-      await sandbox.destroy({ timeoutMs, signal });
-      await sandbox.waitUntilDestroyed({ timeoutMs: 30_000, signal, request: { timeoutMs } });
+      if (sandbox.status !== "destroyed") {
+        try {
+          if (sandbox.status !== "destroying") await sandbox.destroy({ timeoutMs, signal });
+          await sandbox.waitUntilDestroyed({ timeoutMs: 30_000, signal, request: { timeoutMs } });
+        } catch (error) {
+          if (!(error instanceof CreateosSandboxNotFoundError)) throw error;
+        }
+      }
     }
     sandbox = await client.createSandbox(
       { shape: "s-1vcpu-1gb", rootfs: "devbox:1", egress: rules },
@@ -44,12 +50,26 @@ export async function sharedSandbox(signal?: AbortSignal): Promise<{
     await writeFile(idFile, `${sandbox.id}\n`, { mode: 0o600 });
   }
   if (!sandbox) throw new Error("Sandbox unavailable");
-  let egress = (await sandbox.getEgress({ timeoutMs, signal })).egress;
-  if (egress.length !== 1 || egress[0] !== rules[0]) {
-    egress = (await sandbox.setEgress(rules, { timeoutMs, signal })).egress;
-  }
-  if (egress.length !== 1 || egress[0] !== rules[0]) {
-    throw new Error("Sandbox egress allowlist is unsafe");
+  let egress: string[];
+  try {
+    egress = (await sandbox.getEgress({ timeoutMs, signal })).egress;
+    if (egress.length !== 1 || egress[0] !== rules[0]) {
+      egress = (await sandbox.setEgress(rules, { timeoutMs, signal })).egress;
+    }
+    if (egress.length !== 1 || egress[0] !== rules[0]) {
+      throw new Error("Sandbox egress allowlist is unsafe");
+    }
+  } catch (error) {
+    if (replace || signal?.aborted) throw error;
+    if (!(error instanceof CreateosSandboxNotFoundError)) {
+      try { await sandbox.refresh({ timeoutMs, signal }); }
+      catch (refreshError) {
+        if (!(refreshError instanceof CreateosSandboxNotFoundError)) throw error;
+        return sharedSandbox(signal, sandbox);
+      }
+      if (sandbox.status === "running") throw error;
+    }
+    return sharedSandbox(signal, sandbox);
   }
   return { sandbox, reused, ms: Date.now() - started, egress };
 }

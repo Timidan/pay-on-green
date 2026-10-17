@@ -5,15 +5,22 @@ import { complete, patchPath } from "./agent";
 import { sharedSandbox, uploadFiles, wipeWork, restoreTests, runTests, testsPassed } from "./sandbox";
 import { hold, capture, release } from "./stripe";
 import { taskRegistry } from "./tasks";
+import { CreateosSandboxNotFoundError } from "@nodeops-createos/sandbox";
 
 type Job = {
+  taskId: string;
   events: JobEvent[];
   listeners: Set<(event: JobEvent) => void>;
   running: boolean;
 };
 
-const root = globalThis as typeof globalThis & { payOnGreenJobs?: Map<string, Job> };
+const root = globalThis as typeof globalThis & {
+  payOnGreenJobs?: Map<string, Job>;
+  payOnGreenQueue?: string[];
+  payOnGreenActive?: boolean;
+};
 export const jobs = (root.payOnGreenJobs ??= new Map<string, Job>());
+const queue = (root.payOnGreenQueue ??= []);
 
 function emit(job: Job, event: JobEvent) {
   job.events.push(event);
@@ -40,14 +47,20 @@ function summary(output: string, pass: boolean) {
     : pass ? "Tests passed" : "Tests failed";
 }
 
-export function startJob(taskId: string): string | "busy" | "unknown" {
+export function startJob(taskId: string): string | "full" | "unknown" {
   if (!Object.hasOwn(taskRegistry, taskId)) return "unknown";
   const entry = taskRegistry[taskId];
-  if ([...jobs.values()].some((job) => job.running)) return "busy";
+  if (root.payOnGreenActive && queue.length >= 5) return "full";
   const jobId = randomUUID();
-  const job: Job = { events: [], listeners: new Set(), running: true };
+  const job: Job = { taskId, events: [], listeners: new Set(), running: true };
   jobs.set(jobId, job);
-  void runJob(jobId, job, entry);
+  if (root.payOnGreenActive) {
+    queue.push(jobId);
+    emit(job, { t: "queued", at: Date.now(), position: queue.length });
+  } else {
+    root.payOnGreenActive = true;
+    void runJob(jobId, job, entry);
+  }
   return jobId;
 }
 
@@ -56,7 +69,8 @@ export function getJob(jobId: string) {
 }
 
 async function runJob(jobId: string, job: Job, { task, files: seedFiles, expectedTests }: (typeof taskRegistry)[string]) {
-  const signal = AbortSignal.timeout(240_000);
+  // Reserve 20 seconds of the four-minute job cap for settlement and cleanup.
+  const signal = AbortSignal.timeout(220_000);
   let paymentIntentId: string | undefined;
   let sandbox: Awaited<ReturnType<typeof sharedSandbox>>["sandbox"] | undefined;
   let green = false;
@@ -79,13 +93,38 @@ async function runJob(jobId: string, job: Job, { task, files: seedFiles, expecte
 
     const files: Record<string, string> = { ...seedFiles };
     const tests = Object.fromEntries(Object.entries(seedFiles).filter(([path]) => path.startsWith("test/")));
-    await wipeWork(sandbox, signal);
-    await uploadFiles(sandbox, files, signal);
+    let healed = false;
+    const inSandbox = async <T>(operation: (current: NonNullable<typeof sandbox>) => Promise<T>): Promise<T> => {
+      try { return await operation(sandbox!); }
+      catch (error) {
+        if (healed || signal.aborted) throw error;
+        if (!(error instanceof CreateosSandboxNotFoundError)) {
+          let gone = false;
+          try { await sandbox!.refresh({ timeoutMs: 10_000, signal }); }
+          catch (refreshError) {
+            if (!(refreshError instanceof CreateosSandboxNotFoundError)) throw error;
+            gone = true;
+          }
+          if (!gone && sandbox!.status === "running") throw error;
+        }
+        healed = true;
+        const replacement = await sharedSandbox(signal, sandbox);
+        sandbox = replacement.sandbox;
+        emit(job, { t: "sandbox", at: Date.now(), sandboxId: sandbox.id,
+          image: "devbox:1", reused: false, ms: replacement.ms });
+        emit(job, { t: "egress", at: Date.now(), rules: replacement.egress });
+        await wipeWork(sandbox, signal);
+        await uploadFiles(sandbox, files, signal);
+        return operation(sandbox);
+      }
+    };
+    await inSandbox((current) => wipeWork(current, signal));
+    await inSandbox((current) => uploadFiles(current, files, signal));
 
     const test = async (attempt: number) => {
-      await restoreTests(sandbox!, tests, signal);
+      await inSandbox((current) => restoreTests(current, tests, signal));
       const started = Date.now();
-      const result = await runTests(sandbox!, task.testCmd, signal);
+      const result = await inSandbox((current) => runTests(current, task.testCmd, signal));
       const output = `${result.result.stdout}${result.result.stderr}`;
       const pass = !result.result.error && testsPassed(result.result.exit_code, output, expectedTests);
       emit(job, { t: "tests", at: Date.now(), attempt, pass, summary: summary(output, pass), output, ms: Date.now() - started });
@@ -113,7 +152,7 @@ async function runJob(jobId: string, job: Job, { task, files: seedFiles, expecte
         }
         for (const [index, file] of patch.files.entries()) {
           const path = paths[index].path;
-          await uploadFiles(sandbox, { [path]: file.content }, signal);
+          await inSandbox((current) => uploadFiles(current, { [path]: file.content }, signal));
           files[path] = file.content;
         }
         emit(job, { t: "attempt", at: Date.now(), attempt, model: patch.model,
@@ -153,5 +192,11 @@ async function runJob(jobId: string, job: Job, { task, files: seedFiles, expecte
     }
     job.running = false;
     emit(job, { t: "done", at: Date.now() });
+    const nextId = queue.shift();
+    for (const [index, waitingId] of queue.entries()) {
+      emit(jobs.get(waitingId)!, { t: "queued", at: Date.now(), position: index + 1 });
+    }
+    if (nextId) void runJob(nextId, jobs.get(nextId)!, taskRegistry[jobs.get(nextId)!.taskId]);
+    else root.payOnGreenActive = false;
   }
 }
