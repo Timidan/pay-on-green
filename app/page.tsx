@@ -9,7 +9,7 @@ async function RunWithParams({ searchParams }: { searchParams: PageProps<"/">["s
 
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
+    <main className="mx-auto w-full max-w-6xl overflow-x-clip px-4 pb-16 sm:px-6">
       <Hero />
       <section id="run" className="scroll-mt-6 pt-14">
         <p className="font-mono text-xs tracking-[0.14em] text-muted uppercase">Try it</p>

@@ -29,12 +29,32 @@ function DiffView({ diff }: { diff: string }) {
   );
 }
 
+const SAMPLE_REPO = "https://github.com/Timidan/pay-on-green-sample";
+const GITHUB_RE = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+?(\.git)?\/?$/;
+const REPO_TASK: Task = {
+  id: "repo",
+  title: "Your repo",
+  blurb: "Paste a public GitHub repo with a failing test. Node: Vitest, Jest or node:test.",
+  priceCents: 500,
+  testCmd: "detected",
+};
+
+function download(name: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: "text/x-diff" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: name });
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function Run({ mock }: { mock?: string }) {
   const [tasks, setTasks] = useState<Task[]>(mock ? MOCK_TASKS : []);
   const [taskId, setTaskId] = useState<string>("split-bill");
   const [events, setEvents] = useState<JobEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [repoUrl, setRepoUrl] = useState(SAMPLE_REPO);
+  const [testPath, setTestPath] = useState("");
+  const [copied, setCopied] = useState(false);
   const cleanup = useRef<() => void>(() => {});
 
   useEffect(() => {
@@ -50,7 +70,11 @@ export function Run({ mock }: { mock?: string }) {
   const done = events.some((e) => e.t === "done");
   const running = busy && !done;
   const queued = running && !events.some((e) => e.t === "hold") && events.some((e) => e.t === "queued");
-  const task = tasks.find((t) => t.id === taskId);
+  const isRepo = taskId === "repo";
+  const repoOk = GITHUB_RE.test(repoUrl.trim());
+  const repoName = repoUrl.trim().replace(/^https:\/\/github\.com\//, "").replace(/(\.git)?\/?$/, "");
+  const task = isRepo ? { ...REPO_TASK, title: repoOk ? repoName : "Your repo" } : tasks.find((t) => t.id === taskId);
+  const finalPatch = events.findLast((e): e is Extract<JobEvent, { t: "patch" }> => e.t === "patch");
   const tests = events.filter((e): e is Extract<JobEvent, { t: "tests" }> => e.t === "tests");
   const attempts = events.filter((e): e is Extract<JobEvent, { t: "attempt" }> => e.t === "attempt");
   const lastTests = tests.at(-1);
@@ -64,7 +88,7 @@ export function Run({ mock }: { mock?: string }) {
 
     if (mock) {
       const t0 = Date.now();
-      const timers = mockSteps(taskId === "unfixable" ? "fail" : mock).map(({ delay, ev }) =>
+      const timers = mockSteps(isRepo ? "repo" : taskId === "unfixable" ? "fail" : mock).map(({ delay, ev }) =>
         setTimeout(() => setEvents((xs) => [...xs, { ...ev, at: t0 + delay } as JobEvent]), delay),
       );
       cleanup.current = () => timers.forEach(clearTimeout);
@@ -74,7 +98,7 @@ export function Run({ mock }: { mock?: string }) {
     const r = await fetch("/api/jobs", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ taskId }),
+      body: JSON.stringify(isRepo ? { repoUrl: repoUrl.trim(), testPath: testPath.trim() || undefined } : { taskId }),
     });
     if (!r.ok) {
       setBusy(false);
@@ -100,8 +124,8 @@ export function Run({ mock }: { mock?: string }) {
   return (
     <>
       <section aria-label="Pick a failing test" className="mt-8">
-        <div role="radiogroup" className="grid gap-3 sm:grid-cols-3">
-          {tasks.map((t) => (
+        <div role="radiogroup" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[...tasks, REPO_TASK].map((t) => (
             <button
               key={t.id}
               role="radio"
@@ -112,19 +136,60 @@ export function Run({ mock }: { mock?: string }) {
                 t.id === taskId ? "border-fg bg-card shadow-[0_0_0_3px_var(--sunken)]" : "border-line bg-card hover:border-input"
               }`}
             >
-              <span className="block font-medium">{t.title}</span>
+              <span className="flex items-center gap-2 font-medium">
+                {t.title}
+                {t.id === "repo" && <span className="rounded-full bg-pass-soft px-2 py-0.5 font-mono text-[10px] text-pass">YOURS</span>}
+              </span>
               <span className="mt-1 block text-sm text-muted">{t.blurb}</span>
             </button>
           ))}
         </div>
 
+        {isRepo && (
+          <div className="mt-4 grid gap-3 rounded-xl border border-line bg-card p-4 sm:grid-cols-[1fr_16rem]">
+            <label className="grid gap-1.5 text-sm">
+              <span className="text-muted">Public GitHub repository</span>
+              <input
+                type="url"
+                inputMode="url"
+                spellCheck={false}
+                value={repoUrl}
+                disabled={running}
+                onChange={(e) => setRepoUrl(e.target.value)}
+                placeholder="https://github.com/owner/repo"
+                className={`h-11 rounded-lg border bg-bg px-3 font-mono text-[13px] outline-none focus:border-fg ${repoOk ? "border-input" : "border-fail"}`}
+              />
+            </label>
+            <label className="grid gap-1.5 text-sm">
+              <span className="text-muted">Test file (optional)</span>
+              <input
+                value={testPath}
+                disabled={running}
+                spellCheck={false}
+                onChange={(e) => setTestPath(e.target.value)}
+                placeholder="test/money.test.js"
+                className="h-11 rounded-lg border border-input bg-bg px-3 font-mono text-[13px] outline-none focus:border-fg"
+              />
+            </label>
+            <p className="text-xs text-muted sm:col-span-2">
+              The sandbox clones and installs with GitHub and npm reachable, then locks the network before the agent writes code. Your test
+              files, package.json, lockfile and test config are protected.{" "}
+              {repoUrl !== SAMPLE_REPO && (
+                <button type="button" className="underline underline-offset-2 hover:text-fg" onClick={() => setRepoUrl(SAMPLE_REPO)}>
+                  Use the sample repo
+                </button>
+              )}
+            </p>
+          </div>
+        )}
+
         <div className="mt-5 flex flex-wrap items-center gap-4">
           <button
             onClick={start}
-            disabled={running || !task}
+            disabled={running || !task || (isRepo && !repoOk)}
             className="h-12 rounded-full bg-fg px-6 font-medium text-white transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgb(34_197_94/0.25)] active:translate-y-0 active:scale-[0.98] disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
           >
-            {queued ? "Waiting in line…" : running ? "Fixing…" : done ? "Run again" : `Fix it for $${((task?.priceCents ?? 500) / 100).toFixed(0)}`}
+            {queued ? "Waiting in line…" : running ? "Fixing…" : done ? "Run again" : isRepo ? "Fix my repo for $5" : `Fix it for $${((task?.priceCents ?? 500) / 100).toFixed(0)}`}
           </button>
           {mock ? (
             <span className="rounded-full border border-warn/40 bg-warn-soft px-3 py-1 font-mono text-xs text-warn">
@@ -180,6 +245,33 @@ export function Run({ mock }: { mock?: string }) {
               <p className="p-4 text-sm text-muted">{running ? "The agent is writing a patch…" : "The agent's code change shows up here."}</p>
             )}
           </article>
+
+          {finalPatch && (
+            <article className="panel panel-pass">
+              <header className="panel-head">
+                <span className="min-w-0">Your patch · {finalPatch.files.length} file{finalPatch.files.length === 1 ? "" : "s"} · tests green</span>
+                <div className="flex shrink-0 gap-2 whitespace-nowrap">
+                  <button
+                    onClick={() => download("pay-on-green.patch", finalPatch.diff)}
+                    className="rounded-full bg-fg px-3 py-1 text-xs font-medium text-white hover:opacity-90"
+                  >
+                    Download .patch
+                  </button>
+                  <button
+                    onClick={() => {
+                      void navigator.clipboard.writeText("git apply pay-on-green.patch");
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 1500);
+                    }}
+                    className="rounded-full border border-input px-3 py-1 font-mono text-xs hover:border-fg"
+                  >
+                    {copied ? "copied" : "git apply pay-on-green.patch"}
+                  </button>
+                </div>
+              </header>
+              <DiffView diff={finalPatch.diff} />
+            </article>
+          )}
         </div>
       </section>
     </>

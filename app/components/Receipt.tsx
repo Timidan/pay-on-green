@@ -55,6 +55,27 @@ function row(ev: JobEvent, i: number) {
           {shortModel(ev.model)}
         </Line>
       );
+    case "repo":
+      return (
+        <Line key={i} label="REPO">
+          {ev.url.replace("https://github.com/", "")} @ {ev.commit.slice(0, 7)} · {ev.runner}
+        </Line>
+      );
+    case "setup":
+      return (
+        <Line key={i} label={ev.step.toUpperCase()} tone={ev.ok ? undefined : "fail"}>
+          {ev.ok ? "✓" : "✗"}{" "}
+          {ev.step === "clone" ? "cloned" : ev.step === "install" ? "dependencies installed" : "network locked to npm only"}
+          {ev.ms ? ` · ${(ev.ms / 1000).toFixed(1)} s` : ""}
+          {ev.detail ? ` · ${ev.detail}` : ""}
+        </Line>
+      );
+    case "patch":
+      return (
+        <Line key={i} label="PATCH" tone="pass">
+          ready · {ev.files.length} file{ev.files.length === 1 ? "" : "s"}
+        </Line>
+      );
     case "queued":
       return (
         <Line key={i} label="IN LINE" tone="warn">
