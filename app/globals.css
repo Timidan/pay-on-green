@@ -1,26 +1,111 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+  --bg: #0b0b0c;
+  --surface-2: #17171a;
+  --fg: #f2f2f0;
+  --muted: #9a9a9f;
+  --line: #2a2a2e;
+  --paper: #f3efe6;
+  --ink: #1b1a17;
+  --ink-muted: #6f6a5f;
+  --pass: #3ddc84;
+  --fail: #ff5f56;
+  --warn: #f5b942;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-bg: var(--bg);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-pass: var(--pass);
+  --color-fail: var(--fail);
+  --color-warn: var(--warn);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Receipt: paper with a torn bottom edge */
+.receipt {
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 4px;
+  box-shadow: 0 24px 60px -24px rgb(0 0 0 / 0.7);
+}
+
+.print-in {
+  animation: print-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes print-in {
+  from { opacity: 0; transform: translateY(-4px); clip-path: inset(0 0 100% 0); }
+  to { opacity: 1; transform: none; clip-path: inset(0); }
+}
+
+.blink { animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+.stamp {
+  position: absolute;
+  right: 22px;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 14px;
+  border: 3px solid currentColor;
+  border-radius: 6px;
+  font-family: var(--font-geist-mono);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  transform: rotate(-9deg);
+  mix-blend-mode: multiply;
+  animation: stamp-in 420ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+.stamp small { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; }
+.stamp-pass { color: #13874a; }
+.stamp-neutral { color: #3d5a80; }
+@keyframes stamp-in {
+  from { opacity: 0; transform: rotate(-9deg) scale(1.8); }
+  to { opacity: 0.92; transform: rotate(-9deg) scale(1); }
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #111113;
+  overflow: hidden;
+  transition: border-color 300ms ease;
+}
+.panel-pass { border-color: color-mix(in oklab, var(--pass) 60%, transparent); }
+.panel-fail { border-color: color-mix(in oklab, var(--fail) 55%, transparent); }
+.panel-warn { border-color: color-mix(in oklab, var(--warn) 55%, transparent); }
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+}
+.pill { font-family: var(--font-geist-mono); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.pill-pass { background: color-mix(in oklab, var(--pass) 18%, transparent); color: var(--pass); }
+.pill-fail { background: color-mix(in oklab, var(--fail) 18%, transparent); color: var(--fail); }
+
+@media (prefers-reduced-motion: reduce) {
+  .print-in, .stamp, .blink { animation: none; }
+  .stamp { opacity: 0.92; }
 }
