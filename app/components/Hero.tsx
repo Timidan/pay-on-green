@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Box, CircleCheck, Lock, Undo2 } from "lucide-react";
 import type { JobEvent } from "@/lib/contract";
 import { MOCK_TASKS, mockSteps } from "@/lib/mock";
+import { AnimatedMark } from "./AnimatedMark";
 import { Receipt } from "./Receipt";
 import { ShimmerButton } from "./fx/ShimmerButton";
 
@@ -42,8 +43,9 @@ export function Hero() {
   return (
     <section className="grid min-h-[min(88dvh,52rem)] items-center gap-12 py-12 lg:grid-cols-[1.3fr_1fr] lg:gap-16">
       <div className="lg:self-center">
-        <p className="rise font-mono text-[0.75rem] tracking-[0.14em] text-muted uppercase" style={rise(0)}>
-          Pay-on-Green
+        <p className="rise flex items-center gap-3" style={rise(0)}>
+          <AnimatedMark size={40} play="intro" />
+          <span className="text-lg font-semibold tracking-[-0.02em]">Pay-on-Green</span>
         </p>
         <h1
           className="rise mt-5 text-[clamp(3rem,7.2vw,7rem)] leading-[0.9] font-semibold tracking-[-0.055em] text-balance"
