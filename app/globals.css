@@ -140,6 +140,7 @@ body::after {
 .panel-warn { border-color: color-mix(in oklab, var(--warn) 40%, var(--line)); box-shadow: 0 0 0 3px var(--warn-soft); }
 .panel-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;

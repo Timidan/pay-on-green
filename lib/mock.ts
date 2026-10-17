@@ -87,6 +87,57 @@ const scripts: Record<string, Step[]> = {
   ],
 };
 
+const VITEST_RED = ` ❯ test/money.test.js (5 tests | 3 failed) 9ms
+   × formatCents > formats whole dollars
+     → expected '$5.0' to be '$5.00'
+   × formatCents > pads single-digit cents
+     → expected '$19.5' to be '$19.05'
+   × splitCents > never loses a cent
+     → expected 999 to be 1000
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 2 passed (5)`;
+
+const VITEST_GREEN = ` ✓ test/money.test.js (5 tests) 4ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)`;
+
+const REPO_DIFF = `--- a/src/money.js
++++ b/src/money.js
+@@ -2,11 +2,13 @@
+ export function formatCents(cents) {
+   const dollars = Math.floor(cents / 100);
+   const rest = cents % 100;
+-  return \`$\${dollars}.\${rest}\`;
++  return \`$\${dollars}.\${String(rest).padStart(2, "0")}\`;
+ }
+
+ // Splits a total in cents across n people, never losing a cent.
+ export function splitCents(total, n) {
+-  const share = Math.round(total / n);
+-  return Array(n).fill(share);
++  const base = Math.floor(total / n);
++  const extra = total % n;
++  return Array.from({ length: n }, (_, i) => base + (i < extra ? 1 : 0));
+ }`;
+
+scripts.repo = [
+  { delay: 300, ev: { t: "hold", paymentIntentId: PI, amountCents: 500, status: "requires_capture" } },
+  { delay: 900, ev: { t: "sandbox", sandboxId: "sb-01m53gysq6524smxy6026eb0fb", image: "devbox:1", reused: true, ms: 140 } },
+  { delay: 2600, ev: { t: "setup", step: "clone", ok: true, ms: 1400 } },
+  { delay: 2700, ev: { t: "repo", url: "https://github.com/Timidan/pay-on-green-sample", commit: "a1b2c3d4e5", testCmd: "npx vitest run", runner: "vitest" } },
+  { delay: 6200, ev: { t: "setup", step: "install", ok: true, ms: 3400 } },
+  { delay: 6500, ev: { t: "setup", step: "lock", ok: true, ms: 120 } },
+  { delay: 6600, ev: { t: "egress", rules: ["registry.npmjs.org:443"] } },
+  { delay: 8200, ev: { t: "tests", attempt: 0, pass: false, summary: "3 of 5 failing", output: VITEST_RED, ms: 1500 } },
+  { delay: 13500, ev: { t: "attempt", attempt: 1, model: MODEL, note: "Pad cents to two digits; hand leftover cents to the first people.", diff: REPO_DIFF } },
+  { delay: 15000, ev: { t: "tests", attempt: 1, pass: true, summary: "5 of 5 passing", output: VITEST_GREEN, ms: 1400 } },
+  { delay: 15800, ev: { t: "settled", outcome: "captured", paymentIntentId: PI, status: "succeeded" } },
+  { delay: 15900, ev: { t: "patch", diff: REPO_DIFF, files: ["src/money.js"] } },
+  { delay: 16000, ev: { t: "done" } },
+];
+
 export function mockSteps(name: string): Step[] {
   return scripts[name] ?? scripts.fix;
 }

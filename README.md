@@ -10,7 +10,7 @@
 **An AI agent that fixes your failing test, and only gets paid if the tests go green.**<br>
 Stripe holds $5 on your card. The agent's patch runs in a locked-down CreateOS Sandbox. Green captures the $5; red releases it.
 
-[Live app](https://pay-on-green.timidan.xyz) · [How it works](#how-it-works) · [Quickstart](#quickstart) · [Architecture](#architecture) · [API](#api)
+[Live app](https://pay-on-green.timidan.xyz) · [How it works](#how-it-works) · [Fix your own repo](#fix-your-own-repo) · [Quickstart](#quickstart) · [Architecture](#architecture) · [API](#api)
 
 ![Node.js 24](https://img.shields.io/badge/Node.js-24-3c873a?logo=nodedotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white)
@@ -27,6 +27,7 @@ Coding agents are paid whether or not their code works. Pay-on-Green flips that.
 
 ## Highlights
 
+- **Works on your repo.** Paste a public GitHub repository with a failing test (Node: Vitest, Jest or `node:test`). The agent fixes it in the sandbox, and you get a patch you apply with `git apply`.
 - **Paid on proof, not on effort.** A `PaymentIntent` with `capture_method: "manual"` is authorized up front and settled exactly once: captured after a passing run, cancelled on every other exit, including errors and timeouts.
 - **The agent can't edit its way to green.** Patches that touch `test/` are rejected. Before every run the server deletes `test/` and rewrites it from its own copy, then runs the test command itself.
 - **Green is checked, not assumed.** A pass needs exit code 0 *and* node's own summary showing every expected test passed with none failing, so a patch can't fake success by exiting early.
@@ -82,7 +83,23 @@ sequenceDiagram
 
 **Who pays:** a developer pays $5 per fixed failing test. Stripe authorizes it up front and captures it only after the suite passes in the sandbox. If the agent fails, the hold is released and they pay $0.
 
-The demo ships three seeded repositories:
+## Fix your own repo
+
+1. Pick **Your repo** and paste a public GitHub URL, for example the [sample repo](https://github.com/Timidan/pay-on-green-sample). Add a test file path if you only want one file run.
+2. Stripe places the $5 hold. The sandbox clones the repo (`--depth 1`) and installs dependencies with **GitHub and npm reachable**.
+3. The network is **locked to npm only before the agent writes any code**.
+4. The test files, `package.json`, the lockfile and the test and TypeScript configs are **protected**: a patch that touches them is rejected, and they're restored from git before every run.
+5. **Green** means exit code 0, zero failures, and at least as many tests as the red baseline, using the runner's own counts. A patch can't pass by making tests disappear.
+6. On green, the hold is captured and you get the **cumulative patch**: download it and run `git apply pay-on-green.patch`. If your tests already pass, nothing is charged.
+
+| Limit | Value |
+|---|---|
+| Repositories | Public GitHub, Node.js |
+| Test runners | Vitest, Jest, `node:test`, or `npm test` |
+| Size | 200 MB after clone |
+| Time | 8 minutes per job, 120 s per test run |
+
+The demo also ships three seeded repositories:
 
 | Task | Bug | Expected result |
 |---|---|---|
@@ -136,7 +153,7 @@ Open http://localhost:3000. To see the UI without keys: http://localhost:3000/?m
 | Method | Path | Returns |
 |---|---|---|
 | `GET` | `/api/tasks` | The seeded tasks |
-| `POST` | `/api/jobs` | `202 { jobId }`; the job queues if another is running; `429` when five are already waiting |
+| `POST` | `/api/jobs` | Body `{ taskId }` or `{ repoUrl, testPath? }`. `202 { jobId }`; the job queues if another is running; `429` when five are already waiting |
 | `GET` | `/api/jobs/:id/events` | `text/event-stream` of `JobEvent`s, replayed from the start on connect |
 
 ## Project structure
