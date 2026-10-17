@@ -159,3 +159,22 @@ body::after {
   .print-in, .stamp, .blink, .rise, .animate-shimmer-slide, .animate-spin-around { animation: none; }
   .stamp { opacity: 0.92; }
 }
+
+/* How it works figure: the parts that carry state */
+.anatomy svg { width: 100%; height: auto; display: block; }
+.anatomy .glass { fill: rgb(120 170 200 / 0.07); stroke: rgb(90 140 170 / 0.35); stroke-width: 0.6; }
+.anatomy [data-lamp] .iso-fill, .anatomy [data-lamp] .iso-top, .anatomy [data-lamp] .iso-shade { transition: fill 300ms ease; }
+.anatomy [data-lamp][data-state="red"] .iso-fill, .anatomy [data-lamp][data-state="red"] .iso-shade { fill: #f3b3a8; }
+.anatomy [data-lamp][data-state="red"] .iso-top { fill: #e0604c; }
+.anatomy [data-lamp][data-state="green"] .iso-fill, .anatomy [data-lamp][data-state="green"] .iso-shade { fill: #a9e3c4; }
+.anatomy [data-lamp][data-state="green"] .iso-top { fill: #22c55e; }
+.anatomy [data-part="netlamp"] .iso-top { transition: fill 300ms ease; }
+.anatomy [data-part="netlamp"][data-state="open"] .iso-top { fill: #f5b942; }
+.anatomy [data-part="netlamp"][data-state="closed"] .iso-top { fill: #c9d0d5; }
+
+/* Reveal on scroll */
+.reveal { opacity: 0; transform: translateY(28px); transition: opacity 700ms cubic-bezier(0.16, 1, 0.3, 1), transform 700ms cubic-bezier(0.16, 1, 0.3, 1); }
+.reveal[data-in] { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+}
