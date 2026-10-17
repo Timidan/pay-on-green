@@ -9,6 +9,7 @@ export type Task = {
 };
 
 export type JobEvent =
+  | { t: "queued"; at: number; position: number }
   | { t: "hold"; at: number; paymentIntentId: string; amountCents: number; status: "requires_capture" }
   | { t: "sandbox"; at: number; sandboxId: string; image: string; reused: boolean; ms: number }
   | { t: "egress"; at: number; rules: string[] | null }
@@ -34,3 +35,4 @@ export type JobEvent =
   | { t: "done"; at: number };
 
 // `attempt: 0` is the red baseline run, before the agent writes anything.
+// `queued` is sent while the job waits for the shared sandbox; position 1 means next.
