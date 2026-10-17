@@ -85,3 +85,9 @@ export async function restoreTests(sandbox: Sandbox, files: Record<string, strin
 export async function runTests(sandbox: Sandbox, testCmd: string, signal?: AbortSignal) {
   return sandbox.runCommand("sh", ["-c", `cd /work && ${testCmd}`], { timeoutMs: 30_000, signal });
 }
+
+export function testsPassed(exitCode: number, output: string, expectedTests: number) {
+  return exitCode === 0 &&
+    Number(output.match(/^ℹ fail (\d+)/m)?.[1]) === 0 &&
+    Number(output.match(/^ℹ pass (\d+)/m)?.[1]) === expectedTests;
+}

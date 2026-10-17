@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { createTwoFilesPatch } from "diff";
 import type { JobEvent } from "./contract";
 import { complete, patchPath } from "./agent";
-import { sharedSandbox, uploadFiles, wipeWork, restoreTests, runTests } from "./sandbox";
+import { sharedSandbox, uploadFiles, wipeWork, restoreTests, runTests, testsPassed } from "./sandbox";
 import { hold, capture, release } from "./stripe";
 import { taskRegistry } from "./tasks";
 
@@ -55,7 +55,7 @@ export function getJob(jobId: string) {
   return jobs.get(jobId);
 }
 
-async function runJob(jobId: string, job: Job, { task, files: seedFiles }: (typeof taskRegistry)[string]) {
+async function runJob(jobId: string, job: Job, { task, files: seedFiles, expectedTests }: (typeof taskRegistry)[string]) {
   const signal = AbortSignal.timeout(240_000);
   let paymentIntentId: string | undefined;
   let sandbox: Awaited<ReturnType<typeof sharedSandbox>>["sandbox"] | undefined;
@@ -87,7 +87,7 @@ async function runJob(jobId: string, job: Job, { task, files: seedFiles }: (type
       const started = Date.now();
       const result = await runTests(sandbox!, task.testCmd, signal);
       const output = `${result.result.stdout}${result.result.stderr}`;
-      const pass = result.result.exit_code === 0 && !result.result.error;
+      const pass = !result.result.error && testsPassed(result.result.exit_code, output, expectedTests);
       emit(job, { t: "tests", at: Date.now(), attempt, pass, summary: summary(output, pass), output, ms: Date.now() - started });
       return { pass, output };
     };
@@ -103,7 +103,9 @@ async function runJob(jobId: string, job: Job, { task, files: seedFiles }: (type
         const diff = patch.files.map((file, index) =>
           createTwoFilesPatch(paths[index].path, paths[index].path,
             files[paths[index].path] ?? "", file.content)).join("\n");
-        const rejected = paths.find((item) => item.rejected)?.rejected;
+        const rejected = paths.find((item) => item.rejected)?.rejected ??
+          (patch.files.some((file) => /process\.(?:exitCode|reallyExit|exit|kill)\b/.test(file.content))
+            ? "used forbidden process control" : undefined);
         if (rejected) {
           emit(job, { t: "attempt", at: Date.now(), attempt, model: patch.model,
             note: patch.note, diff, tokens: patch.tokens, rejected });
