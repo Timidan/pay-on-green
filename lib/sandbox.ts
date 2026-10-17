@@ -26,7 +26,11 @@ export async function sharedSandbox(signal?: AbortSignal, replace?: Sandbox): Pr
   let sandbox: Sandbox | undefined = replace;
   if (id && !replace) {
     try {
-      sandbox = await client.getSandbox(id, { timeoutMs, signal });
+      try { sandbox = await client.getSandbox(id, { timeoutMs, signal }); }
+      catch (error) {
+        if (!(error instanceof Error) || !error.message.includes("Request timed out")) throw error;
+        sandbox = await client.getSandbox(id, { timeoutMs, signal });
+      }
     } catch (error) {
       if (!(error instanceof CreateosSandboxNotFoundError)) throw error;
     }
