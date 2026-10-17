@@ -39,7 +39,7 @@ export function patchPath(raw: string) {
   const path = posix.normalize(raw.replaceAll("\\", "/"));
   const relative = posix.relative("/work", posix.resolve("/work", path));
   if (relative.toLowerCase() === "test" || relative.toLowerCase().startsWith("test/")) {
-    return { rejected: "touched a test file", path };
+    return { rejected: "touched a test file", path: relative };
   }
   if (posix.isAbsolute(path) || relative === ".." || relative.startsWith("../") ||
       !relative || path.includes("\0")) {

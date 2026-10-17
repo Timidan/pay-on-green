@@ -4,7 +4,7 @@ import { CreateosSandboxClient, CreateosSandboxNotFoundError, type Sandbox } fro
 
 const rules = ["registry.npmjs.org:443"];
 const timeoutMs = 10_000;
-const idFile = join(process.cwd(), ".sandbox-id");
+const idFile = process.env.SANDBOX_ID_FILE || join(process.cwd(), ".sandbox-id");
 
 export async function sharedSandbox(signal?: AbortSignal): Promise<{
   sandbox: Sandbox;
@@ -18,7 +18,7 @@ export async function sharedSandbox(signal?: AbortSignal): Promise<{
   const started = Date.now();
   let id: string | undefined;
   try {
-    id = (await readFile(idFile, "utf8")).trim() || undefined;
+    id = (await readFile(/* turbopackIgnore: true */ idFile, "utf8")).trim() || undefined;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }

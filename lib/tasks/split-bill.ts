@@ -2,7 +2,7 @@ import type { Task } from "../contract";
 
 export const splitBill: Task = {
   id: "split-bill",
-  title: "Split the bill",
+  title: "Split a bill",
   blurb: "Splitting $10 three ways loses a cent. Fix the rounding.",
   priceCents: 500,
   testCmd: "node --test 'test/*.test.js'",

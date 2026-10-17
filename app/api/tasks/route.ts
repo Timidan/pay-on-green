@@ -1,5 +1,5 @@
-import { splitBill } from "@/lib/tasks/split-bill";
+import { taskRegistry } from "@/lib/tasks";
 
 export function GET() {
-  return Response.json([splitBill]);
+  return Response.json(Object.values(taskRegistry).map(({ task }) => task));
 }

@@ -4,7 +4,7 @@ import type { JobEvent } from "./contract";
 import { complete, patchPath } from "./agent";
 import { sharedSandbox, uploadFiles, wipeWork, restoreTests, runTests } from "./sandbox";
 import { hold, capture, release } from "./stripe";
-import { splitBill, splitBillFiles } from "./tasks/split-bill";
+import { taskRegistry } from "./tasks";
 
 type Job = {
   events: JobEvent[];
@@ -41,12 +41,13 @@ function summary(output: string, pass: boolean) {
 }
 
 export function startJob(taskId: string): string | "busy" | "unknown" {
-  if (taskId !== splitBill.id) return "unknown";
+  if (!Object.hasOwn(taskRegistry, taskId)) return "unknown";
+  const entry = taskRegistry[taskId];
   if ([...jobs.values()].some((job) => job.running)) return "busy";
   const jobId = randomUUID();
   const job: Job = { events: [], listeners: new Set(), running: true };
   jobs.set(jobId, job);
-  void runJob(jobId, job);
+  void runJob(jobId, job, entry);
   return jobId;
 }
 
@@ -54,17 +55,17 @@ export function getJob(jobId: string) {
   return jobs.get(jobId);
 }
 
-async function runJob(jobId: string, job: Job) {
+async function runJob(jobId: string, job: Job, { task, files: seedFiles }: (typeof taskRegistry)[string]) {
   const signal = AbortSignal.timeout(240_000);
   let paymentIntentId: string | undefined;
   let sandbox: Awaited<ReturnType<typeof sharedSandbox>>["sandbox"] | undefined;
   let green = false;
   try {
-    const paymentIntent = await hold(jobId, splitBill.id, splitBill.priceCents);
+    const paymentIntent = await hold(jobId, task.id, task.priceCents);
     paymentIntentId = paymentIntent.id;
     if (paymentIntent.status !== "requires_capture") throw new Error("Stripe hold was not authorized");
     emit(job, {
-      t: "hold", at: Date.now(), paymentIntentId, amountCents: splitBill.priceCents,
+      t: "hold", at: Date.now(), paymentIntentId, amountCents: task.priceCents,
       status: "requires_capture",
     });
 
@@ -76,15 +77,15 @@ async function runJob(jobId: string, job: Job) {
     });
     emit(job, { t: "egress", at: Date.now(), rules: shared.egress });
 
-    const files: Record<string, string> = { ...splitBillFiles };
-    const tests = Object.fromEntries(Object.entries(splitBillFiles).filter(([path]) => path.startsWith("test/")));
+    const files: Record<string, string> = { ...seedFiles };
+    const tests = Object.fromEntries(Object.entries(seedFiles).filter(([path]) => path.startsWith("test/")));
     await wipeWork(sandbox, signal);
     await uploadFiles(sandbox, files, signal);
 
     const test = async (attempt: number) => {
       await restoreTests(sandbox!, tests, signal);
       const started = Date.now();
-      const result = await runTests(sandbox!, splitBill.testCmd, signal);
+      const result = await runTests(sandbox!, task.testCmd, signal);
       const output = `${result.result.stdout}${result.result.stderr}`;
       const pass = result.result.exit_code === 0 && !result.result.error;
       emit(job, { t: "tests", at: Date.now(), attempt, pass, summary: summary(output, pass), output, ms: Date.now() - started });
@@ -99,15 +100,15 @@ async function runJob(jobId: string, job: Job) {
         const prompt = `Fix the failing source code. Test files are read-only. Return JSON with files [{path,content}] and note.\nFiles: ${JSON.stringify(files)}\nLast test output:\n${last.output}`;
         const patch = await complete(prompt, signal);
         const paths = patch.files.map((file) => patchPath(file.path));
-        const rejected = paths.find((item) => item.rejected)?.rejected;
-        if (rejected) {
-          emit(job, { t: "attempt", at: Date.now(), attempt, model: patch.model,
-            note: patch.note, diff: "", tokens: patch.tokens, rejected });
-          continue;
-        }
         const diff = patch.files.map((file, index) =>
           createTwoFilesPatch(paths[index].path, paths[index].path,
             files[paths[index].path] ?? "", file.content)).join("\n");
+        const rejected = paths.find((item) => item.rejected)?.rejected;
+        if (rejected) {
+          emit(job, { t: "attempt", at: Date.now(), attempt, model: patch.model,
+            note: patch.note, diff, tokens: patch.tokens, rejected });
+          continue;
+        }
         for (const [index, file] of patch.files.entries()) {
           const path = paths[index].path;
           await uploadFiles(sandbox, { [path]: file.content }, signal);
