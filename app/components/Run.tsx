@@ -13,9 +13,9 @@ function DiffView({ diff }: { diff: string }) {
           l.startsWith("+++") || l.startsWith("---")
             ? "text-muted"
             : l.startsWith("+")
-              ? "bg-pass/12 text-pass"
+              ? "bg-pass-soft text-pass"
               : l.startsWith("-")
-                ? "bg-fail/12 text-fail"
+                ? "bg-fail-soft text-fail"
                 : l.startsWith("@@")
                   ? "text-muted"
                   : "";
@@ -97,7 +97,7 @@ export function Run({ mock }: { mock?: string }) {
 
   return (
     <>
-      <section aria-label="Pick a failing test" className="mt-10">
+      <section aria-label="Pick a failing test" className="mt-8">
         <div role="radiogroup" className="grid gap-3 sm:grid-cols-3">
           {tasks.map((t) => (
             <button
@@ -106,8 +106,8 @@ export function Run({ mock }: { mock?: string }) {
               aria-checked={t.id === taskId}
               disabled={running}
               onClick={() => setTaskId(t.id)}
-              className={`rounded-xl border p-4 text-left transition-colors disabled:opacity-60 ${
-                t.id === taskId ? "border-fg bg-surface-2" : "border-line hover:border-muted"
+              className={`rounded-xl border p-4 text-left transition-[border-color,box-shadow] duration-200 disabled:opacity-60 ${
+                t.id === taskId ? "border-fg bg-card shadow-[0_0_0_3px_var(--sunken)]" : "border-line bg-card hover:border-input"
               }`}
             >
               <span className="block font-medium">{t.title}</span>
@@ -120,7 +120,7 @@ export function Run({ mock }: { mock?: string }) {
           <button
             onClick={start}
             disabled={running || !task}
-            className="rounded-full bg-pass px-6 py-3 font-semibold text-black transition-transform active:scale-[0.97] disabled:opacity-50"
+            className="h-12 rounded-full bg-fg px-6 font-medium text-white transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgb(34_197_94/0.25)] active:translate-y-0 active:scale-[0.98] disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
           >
             {running ? "Fixing…" : done ? "Run again" : `Fix it for $${((task?.priceCents ?? 500) / 100).toFixed(0)}`}
           </button>
@@ -133,7 +133,7 @@ export function Run({ mock }: { mock?: string }) {
         )}
       </section>
 
-      <section className="mt-10 grid gap-6 lg:grid-cols-[380px_1fr]">
+      <section className="mt-8 grid gap-6 lg:grid-cols-[380px_1fr]">
         <Receipt task={task} events={events} running={running} />
 
         <div className="flex min-w-0 flex-col gap-6">
@@ -161,7 +161,7 @@ export function Run({ mock }: { mock?: string }) {
             {lastAttempt ? (
               <>
                 {lastAttempt.rejected && (
-                  <p className="border-b border-line bg-warn/10 px-4 py-2 text-sm text-warn">
+                  <p className="border-b border-line bg-warn-soft px-4 py-2 text-sm text-warn">
                     Rejected: the agent {lastAttempt.rejected}. It can&apos;t make tests pass by editing them.
                   </p>
                 )}
